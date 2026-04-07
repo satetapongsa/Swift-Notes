@@ -5,46 +5,58 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Animated
 } from 'react-native';
 import { Colors, Typography } from '../theme/theme';
 import { Lock, X, Delete } from 'lucide-react-native';
+import { useNotes } from '../context/NoteContext';
+import { useTheme } from '../theme/ThemeContext';
 
 const PasscodeScreen = ({ navigation }) => {
-  const [passcode, setPasscode] = useState([]);
+  const { colors, isDark } = useTheme();
+  const { setPasscode: setGlobalPasscode, setPasslockEnabled } = useNotes();
+  const [localPasscode, setLocalPasscode] = useState([]);
   
   const handlePress = (num) => {
-    if (passcode.length < 4) {
-      const newPasscode = [...passcode, num];
-      setPasscode(newPasscode);
+    if (localPasscode.length < 4) {
+      const newPasscode = [...localPasscode, num];
+      setLocalPasscode(newPasscode);
       if (newPasscode.length === 4) {
-        // Logic to verify or set passcode
-        setTimeout(() => navigation.replace('Main'), 300);
+        // Save to global context
+        const passcodeStr = newPasscode.join('');
+        setGlobalPasscode(passcodeStr);
+        setPasslockEnabled(true);
+        
+        // Success animation or feedback could go here
+        setTimeout(() => {
+          navigation.goBack(); // Return to settings correctly
+        }, 400);
       }
     }
   };
 
   const handleDelete = () => {
-    setPasscode(passcode.slice(0, -1));
+    setLocalPasscode(localPasscode.slice(0, -1));
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <X size={24} color={Colors.text} />
+          <X size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Set Passcode</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Set Passcode</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Create a passcode</Text>
-        <Text style={styles.subtitle}>Enter a 4-digit passcode to secure your account and personal data.</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Create a passcode</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Enter a 4-digit passcode to secure your account and personal data.</Text>
 
         <View style={styles.dotsContainer}>
           {[1, 2, 3, 4].map((_, i) => (
@@ -52,15 +64,16 @@ const PasscodeScreen = ({ navigation }) => {
               key={i} 
               style={[
                 styles.dot, 
-                passcode.length > i && styles.dotActive
+                { borderColor: colors.border },
+                localPasscode.length > i && { backgroundColor: colors.primary, borderColor: colors.primary }
               ]} 
             />
           ))}
         </View>
 
         <View style={styles.lockIconContainer}>
-          <View style={styles.lockCircle}>
-            <Lock size={40} color={Colors.primary} />
+          <View style={[styles.lockCircle, { backgroundColor: colors.primary + '15' }]}>
+            <Lock size={40} color={colors.primary} />
           </View>
         </View>
       </View>
@@ -80,9 +93,9 @@ const PasscodeScreen = ({ navigation }) => {
                 onPress={() => item === 'delete' ? handleDelete() : item !== '' && handlePress(item)}
               >
                 {item === 'delete' ? (
-                  <Delete size={24} color={Colors.text} />
+                  <Delete size={28} color={colors.text} />
                 ) : (
-                  <Text style={styles.keyText}>{item}</Text>
+                  <Text style={[styles.keyText, { color: colors.text }]}>{item}</Text>
                 )}
               </TouchableOpacity>
             ))}
@@ -96,7 +109,6 @@ const PasscodeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
@@ -106,13 +118,11 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   headerTitle: {
-    ...Typography.h2,
     fontSize: 18,
     fontWeight: '800',
   },
   cancelText: {
-    ...Typography.body,
-    color: Colors.primary,
+    fontSize: 16,
     fontWeight: '600',
   },
   content: {
@@ -121,14 +131,13 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   title: {
-    ...Typography.h1,
     fontSize: 28,
+    fontWeight: '800',
     marginBottom: 10,
   },
   subtitle: {
-    ...Typography.body,
     textAlign: 'center',
-    color: Colors.textSecondary,
+    fontSize: 14,
     marginBottom: 30,
     lineHeight: 22,
   },
@@ -137,16 +146,11 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E5E5EA',
-    marginHorizontal: 10,
-  },
-  dotActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    marginHorizontal: 12,
   },
   lockIconContainer: {
     marginBottom: 30,
@@ -154,8 +158,7 @@ const styles = StyleSheet.create({
   lockCircle: {
     width: 100,
     height: 100,
-    borderRadius: 25,
-    backgroundColor: '#EBF5FF',
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -168,19 +171,19 @@ const styles = StyleSheet.create({
   keypadRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   key: {
     width: '30%',
-    height: 80,
+    height: 70,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keyText: {
-    ...Typography.h1,
-    fontSize: 28,
-    fontWeight: '500',
+    fontSize: 32,
+    fontWeight: '600',
   },
 });
 
 export default PasscodeScreen;
+

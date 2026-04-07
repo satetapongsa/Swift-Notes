@@ -1,33 +1,35 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Switch, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Switch,
   Image,
   SafeAreaView,
   StatusBar,
   Alert
 } from 'react-native';
-import { 
-  ChevronLeft, 
-  User, 
-  Sun, 
-  Bell, 
-  Shield, 
-  Lock, 
-  Fingerprint, 
+import {
+  ChevronLeft,
+  User,
+  Sun,
+  Bell,
+  Shield,
+  Lock,
+  Fingerprint,
   ChevronRight,
   Pencil,
-  LogOut
+  LogOut,
+  Trash2
 } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useNotes } from '../context/NoteContext';
 
 const SettingsScreen = ({ navigation }) => {
   const { isDark, toggleTheme, colors, typography } = useTheme();
-  const [passlockEnabled, setPasslockEnabled] = useState(false);
+  const { trash, passlockEnabled, setPasslockEnabled } = useNotes();
   const [faceIdEnabled, setFaceIdEnabled] = useState(true);
 
   const handleLogout = () => {
@@ -36,18 +38,18 @@ const SettingsScreen = ({ navigation }) => {
       "Are you sure you want to logout?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive", 
-          onPress: () => navigation.replace('Login') 
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: () => navigation.replace('Login')
         }
       ]
     );
   };
 
   const SettingItem = ({ icon, label, value, onPress, badge, showSwitch, switchValue, onSwitchChange }) => (
-    <TouchableOpacity 
-      style={[styles.settingItem, { borderBottomColor: colors.border }]} 
+    <TouchableOpacity
+      style={[styles.settingItem, { borderBottomColor: colors.border }]}
       onPress={onPress}
       disabled={showSwitch}
     >
@@ -59,8 +61,8 @@ const SettingsScreen = ({ navigation }) => {
         {value && <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{value}</Text>}
         {badge && <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View>}
         {showSwitch ? (
-          <Switch 
-            value={switchValue} 
+          <Switch
+            value={switchValue}
             onValueChange={onSwitchChange}
             trackColor={{ false: '#767577', true: colors.primary }}
             thumbColor={colors.white}
@@ -75,7 +77,7 @@ const SettingsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: colors.lightGray }]}>
@@ -89,9 +91,9 @@ const SettingsScreen = ({ navigation }) => {
         {/* Profile */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=200' }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=200' }}
+              style={styles.avatar}
             />
             <TouchableOpacity style={[styles.editIconContainer, { backgroundColor: colors.primary }]}>
               <Pencil size={12} color={colors.white} />
@@ -105,22 +107,22 @@ const SettingsScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>ACCOUNT & PREFERENCE</Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <SettingItem 
-              icon={<User size={20} color={colors.primary} />} 
-              label="Personal Information" 
+            <SettingItem
+              icon={<User size={20} color={colors.primary} />}
+              label="Personal Information"
             />
             <View style={[styles.line, { backgroundColor: colors.border }]} />
-            <SettingItem 
-              icon={<Sun size={20} color={colors.warning} />} 
-              label="Dark Mode" 
+            <SettingItem
+              icon={<Sun size={20} color={colors.warning} />}
+              label="Dark Mode"
               showSwitch={true}
               switchValue={isDark}
               onSwitchChange={toggleTheme}
             />
             <View style={[styles.line, { backgroundColor: colors.border }]} />
-            <SettingItem 
-              icon={<Bell size={20} color={colors.danger} />} 
-              label="Notifications" 
+            <SettingItem
+              icon={<Bell size={20} color={colors.danger} />}
+              label="Notifications"
             />
           </View>
         </View>
@@ -129,14 +131,14 @@ const SettingsScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SECURITY & PRIVACY</Text>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <SettingItem 
-              icon={<Shield size={20} color={colors.primary} />} 
-              label="Security Center" 
+            <SettingItem
+              icon={<Shield size={20} color={colors.primary} />}
+              label="Security Center"
             />
             <View style={[styles.line, { backgroundColor: colors.border }]} />
-            <SettingItem 
-              icon={<Lock size={20} color={colors.textSecondary} />} 
-              label="Passcode Lock" 
+            <SettingItem
+              icon={<Lock size={20} color={colors.textSecondary} />}
+              label="Passcode Lock"
               showSwitch={true}
               switchValue={passlockEnabled}
               onSwitchChange={(val) => {
@@ -144,16 +146,10 @@ const SettingsScreen = ({ navigation }) => {
                 if (val) navigation.navigate('Passcode');
               }}
             />
-          </View>
-        </View>
-
-        {/* Security & Storage */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SECURITY & STORAGE</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <SettingItem 
-              icon={<Fingerprint size={20} color={colors.success} />} 
-              label="FaceID Authentication" 
+            <View style={[styles.line, { backgroundColor: colors.border }]} />
+            <SettingItem
+              icon={<Fingerprint size={20} color={colors.success} />}
+              label="FaceID Authentication"
               showSwitch={true}
               switchValue={faceIdEnabled}
               onSwitchChange={(val) => {
@@ -164,16 +160,30 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Trash & Cleanup */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>STORAGE & CLEANUP</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <SettingItem
+              icon={<Trash2 size={20} color={colors.danger} />}
+              label="Trash Bin"
+              value={trash.workspaces.length + trash.notes.length > 0 ? `${trash.workspaces.length + trash.notes.length} total items` : "Clean"}
+              onPress={() => navigation.navigate('Trash')}
+            />
+          </View>
+        </View>
+
         <TouchableOpacity style={[styles.logoutButton, { backgroundColor: isDark ? '#2C1212' : '#FFF1F0' }]} onPress={handleLogout}>
           <LogOut size={22} color={colors.danger} />
           <Text style={[styles.logoutText, { color: colors.danger }]}>Logout from Device</Text>
         </TouchableOpacity>
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

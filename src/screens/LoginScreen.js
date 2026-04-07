@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -8,27 +8,27 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
 } from 'react-native';
-import { Colors, Typography } from '../theme/theme';
-import { Mail, Lock, Eye, EyeOff, FileText, Pen } from 'lucide-react-native';
+import {Colors, Typography} from '../theme/theme';
+import {Mail, Lock, Eye, EyeOff, FileText, Pen} from 'lucide-react-native';
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSignIn = () => {
+  const handleSignIn = useCallback(() => {
     navigation.replace('Main');
-  };
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+        style={styles.container}>
         <View style={styles.content}>
+          {/* Logo Section */}
           <View style={styles.logoContainer}>
             <View style={styles.logoBox}>
               <FileText color="#FFFFFF" size={48} />
@@ -42,6 +42,7 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.subtitle}>Capture your thoughts, anywhere.</Text>
 
           <View style={styles.form}>
+            {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
               <View style={styles.inputCard}>
@@ -58,6 +59,7 @@ const LoginScreen = ({ navigation }) => {
               </View>
             </View>
 
+            {/* Password Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputCard}>
@@ -84,7 +86,10 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
+            <TouchableOpacity
+              style={styles.signInButton}
+              onPress={handleSignIn}
+              activeOpacity={0.8}>
               <Text style={styles.signInButtonText}>Sign In</Text>
             </TouchableOpacity>
 
@@ -95,16 +100,16 @@ const LoginScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
                 <Image
-                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
+                  source={{uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png'}}
                   style={styles.socialIcon}
                 />
                 <Text style={styles.socialButtonText}>Google</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.socialButton}>
+              <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
                 <Image
-                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/0/747.png' }}
+                  source={{uri: 'https://cdn-icons-png.flaticon.com/512/0/747.png'}}
                   style={styles.socialIcon}
                 />
                 <Text style={styles.socialButtonText}>Apple</Text>
@@ -143,11 +148,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 32,
-    elevation: 8,
+    elevation: 4,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   logoBox: {
     flexDirection: 'row',
@@ -214,11 +219,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 2,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   signInButtonText: {
     ...Typography.title,
@@ -284,3 +289,4 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
+

@@ -1,97 +1,71 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 🛡️ Swiftnote - Premium AI-Powered Collaboration Notes
 
-# Getting Started
+**Swiftnote** เป็นแอปพลิเคชันจดบันทึกระดับพรีเมียมที่รวบรวมพลังของ **AI**, การทำงานร่วมกันแบบ **Real-time Collaboration**, และความปลอดภัยระดับสูงเข้าไว้ด้วยกัน บนดีไซน์ที่ลื่นไหลสไตล์ iOS ครับ
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## ✨ Features เด่นในแอป
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- 🤖 **AI Assistant:** ใช้ปัญญาประดิษฐ์ช่วยสรุปเนื้อหาและต่อยอดไอเดียจากโน้ตของคุณ
+- 👥 **Real-time Collaboration:** สร้าง Workspace ร่วมกับเพื่อนๆ เชิญสมาชิก และทำงานร่วมกันในพื้นที่แชร์
+- 🗑️ **iOS-Style Swipe to Delete:** เลื่อน Card เพื่อลบไฟล์ด้วยความลื่นไหลระดับ Native และแถบสีแดง iOS Style
+- ♻️ **Smart Trash Bin:** ระบบถังขยะที่กู้คืนไฟล์ได้ และมีการป้องกันด้วยพาสเวิร์ดก่อนลบถาวร
+- 🔐 **Secure Passlock:** ระบบล็อกแอปด้วย Passcode และ Biometric ที่จดจำการตั้งค่าถาวรแม้เปลี่ยนธีมสี
+- 🌗 **Dark Mode Support:** รองรับทั้งโหมดมืดและโหมดสว่าง ปรับเปลี่ยนได้ทันทีในหน้าตั้งค่า
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+---
 
-```sh
-# Using npm
-npm start
+## 🚀 วิธีการติดตั้งและเริ่มต้นใช้งาน (Installation)
 
-# OR using Yarn
-yarn start
+### 1. ความต้องการเบื้องต้น (Prerequisites)
+- [Node.js](https://nodejs.org/) (แนะนำ LTS)
+- [Android Studio](https://developer.android.com/studio) (พร้อมลง Android SDK และ Emulator)
+- Java Development Kit (JDK) 17+
+
+### 2. การติดตั้ง Library ทั้งหมด
+เปิด Terminal ในโฟลเดอร์โปรเจกต์แล้วรันคำสั่ง:
+```bash
+npm install
 ```
 
-## Step 2: Build and run your app
+### 3. เริ่มต้นใช้งาน (Start the App)
+คุณต้องเปิด **2 Terminal** พร้อมกันครับ:
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+**Terminal 1: รัน Metro Bundler (Core)**
+```bash
+npx react-native start --reset-cache
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+**Terminal 2: ติดตั้งและเปิดแอปบน Android Emulator**
+```bash
+npx react-native run-android
 ```
 
-Then, and every time you update your native dependencies, run:
+---
 
-```sh
-bundle exec pod install
+## 🛠️ วิธีแก้ปัญหาเบื้องต้น (Troubleshooting)
+
+หากพบปัญหา **Build Error** หรือแอป **ค้าง/ไม่โหลด**:
+
+**วิธีล้างไฟล์ขยะและรันใหม่ (Clean Build):**
+```bash
+cd android
+./gradlew clean
+cd ..
+npx react-native start --reset-cache
+npx react-native run-android
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+---
 
-```sh
-# Using npm
-npm run ios
+## 📦 Tech Stack
+- **Framework:** React Native
+- **Styling:** Custom Design System (Vanilla CSS implementation)
+- **Gestures:** React Native Gesture Handler & Reanimated
+- **Icons:** Lucide React Native
+- **Storage:** AsyncStorage
 
-# OR using Yarn
-yarn ios
-```
+---
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+**พัฒนาโดย:** [satetapongsa](https://github.com/satetapongsa)  
+*โปรดให้คะแนน (Star) หากคุณชอบโปรเจกต์นี้!* ⭐

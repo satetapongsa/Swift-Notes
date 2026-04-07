@@ -79,70 +79,85 @@ export const NoteProvider = ({ children }) => {
     }
   ]);
 
-  // Load data from AsyncStorage on mount
+  const [trash, setTrash] = useState({ workspaces: [], notes: [] });
+  const [passcode, setPasscode] = useState(null);
+  const [passlockEnabled, setPasslockEnabled] = useState(false); // New Persistent State
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const storedFolders = await AsyncStorage.getItem('folders');
-        const storedNotes = await AsyncStorage.getItem('notes');
-        const storedWorkspaces = await AsyncStorage.getItem('workspaces');
-
-        if (storedFolders) setFolders(JSON.parse(storedFolders));
-        if (storedNotes) setNotes(JSON.parse(storedNotes));
-        if (storedWorkspaces) setWorkspaces(JSON.parse(storedWorkspaces));
+        const savedFolders = await AsyncStorage.getItem('folders');
+        const savedNotes = await AsyncStorage.getItem('notes');
+        const savedWorkspaces = await AsyncStorage.getItem('workspaces');
+        const savedTrash = await AsyncStorage.getItem('trash');
+        const savedPasscode = await AsyncStorage.getItem('passcode');
+        const savedPasslock = await AsyncStorage.getItem('passlockEnabled');
+        
+        if (savedFolders) setFolders(JSON.parse(savedFolders));
+        if (savedNotes) setNotes(JSON.parse(savedNotes));
+        if (savedWorkspaces) setWorkspaces(JSON.parse(savedWorkspaces));
+        if (savedTrash) setTrash(JSON.parse(savedTrash));
+        if (savedPasscode) setPasscode(savedPasscode);
+        if (savedPasslock) setPasslockEnabled(JSON.parse(savedPasslock));
+        
+        setIsLoaded(true);
       } catch (error) {
-        console.error('Failed to load storage:', error);
-      } finally {
+        console.error('Error loading data:', error);
         setIsLoaded(true);
       }
     };
     loadData();
   }, []);
 
-  // Save data whenever it changes
   useEffect(() => {
-    if (!isLoaded) return;
     const saveData = async () => {
       try {
-        await AsyncStorage.setItem('folders', JSON.stringify(folders));
-        await AsyncStorage.setItem('notes', JSON.stringify(notes));
-        await AsyncStorage.setItem('workspaces', JSON.stringify(workspaces));
+        if (isLoaded) {
+          await AsyncStorage.setItem('folders', JSON.stringify(folders));
+          await AsyncStorage.setItem('notes', JSON.stringify(notes));
+          await AsyncStorage.setItem('workspaces', JSON.stringify(workspaces));
+          await AsyncStorage.setItem('trash', JSON.stringify(trash));
+          await AsyncStorage.setItem('passlockEnabled', JSON.stringify(passlockEnabled));
+          if (passcode) await AsyncStorage.setItem('passcode', passcode);
+        }
       } catch (error) {
-        console.error('Failed to save storage:', error);
+        console.error('Error saving data:', error);
       }
     };
     saveData();
-  }, [folders, notes, workspaces, isLoaded]);
+  }, [folders, notes, workspaces, trash, passcode, passlockEnabled, isLoaded]);
 
-  const addFolder = (newFolder) => {
-    const folderWithId = { 
-      ...newFolder, 
-      id: Date.now().toString(), 
-      modified: 'Just now' 
-    };
-    setFolders(prev => [prev[0], folderWithId, ...prev.slice(1)]);
+  const addFolder = (name) => {
+    const newFolder = { id: Date.now().toString(), name };
+    setFolders([...folders, newFolder]);
   };
 
   const deleteFolder = (id) => {
-    if (id === 'default') return;
-    setFolders(prev => prev.filter(f => f.id !== id));
-    setNotes(prev => prev.map(n => n.folderId === id ? { ...n, folderId: 'default' } : n));
+    setFolders(folders.filter(f => f.id !== id));
   };
 
-  const addNote = (newNote) => {
-    const noteWithId = { ...newNote, id: Date.now() };
-    setNotes(prev => [noteWithId, ...prev]);
-    return noteWithId;
+  const addNote = (title, content, folderId) => {
+    const newNote = {
+      id: Date.now().toString(),
+      title,
+      content,
+      folderId,
+      updatedAt: new Date().toISOString()
+    };
+    setNotes([newNote, ...notes]);
+    return newNote;
   };
 
-  const updateNote = (id, updatedFields) => {
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, ...updatedFields } : note
-    ));
+  const updateNote = (id, title, content) => {
+    setNotes(notes.map(n => n.id === id ? { ...n, title, content, updatedAt: new Date().toISOString() } : n));
   };
 
   const deleteNote = (id) => {
-    setNotes(prev => prev.filter(n => n.id !== id));
+    const noteToDelete = notes.find(n => n.id === id);
+    if (noteToDelete) {
+      setTrash(prev => ({ ...prev, notes: [noteToDelete, ...prev.notes] }));
+      setNotes(notes.filter(n => n.id !== id));
+    }
   };
 
   const addWorkspace = (newWs) => {
@@ -160,17 +175,71 @@ export const NoteProvider = ({ children }) => {
     return notes.filter(n => n.folderId === folderId).length;
   };
 
+  const addMemberToWorkspace = (wsId, memberName) => {
+    const newMember = {
+      id: Date.now().toString(),
+      name: memberName,
+      role: 'Editor',
+      avatar: '#' + Math.floor(Math.random()*16777215).toString(16) // Random Color
+    };
+    
+    setWorkspaces(prev => prev.map(ws => 
+      ws.id === wsId ? { ...ws, members: [...ws.members, newMember] } : ws
+    ));
+    return newMember;
+  };
+
+  const updateWorkspace = (wsId, updatedFields) => {
+    setWorkspaces(prev => prev.map(ws => 
+      ws.id === wsId ? { ...ws, ...updatedFields } : ws
+    ));
+  };
+
+  const deleteWorkspace = (wsId) => {
+    const wsToDelete = workspaces.find(ws => ws.id === wsId);
+    if (wsToDelete) {
+      setTrash(prev => ({ ...prev, workspaces: [wsToDelete, ...prev.workspaces] }));
+      setWorkspaces(prev => prev.filter(ws => ws.id !== wsId));
+    }
+  };
+
+  const restoreFromTrash = (id, type) => {
+    if (type === 'workspace') {
+      const wsToRestore = trash.workspaces.find(ws => ws.id === id);
+      setWorkspaces(prev => [wsToRestore, ...prev]);
+      setTrash(prev => ({ ...prev, workspaces: prev.workspaces.filter(ws => ws.id !== id) }));
+    } else {
+      const noteToRestore = trash.notes.find(n => n.id === id);
+      setNotes(prev => [noteToRestore, ...prev]);
+      setTrash(prev => ({ ...prev, notes: prev.notes.filter(n => n.id !== id) }));
+    }
+  };
+
+  const emptyTrash = () => {
+    setTrash({ workspaces: [], notes: [] });
+  };
+
   return (
     <NoteContext.Provider value={{ 
       folders, 
       notes, 
       workspaces,
+      trash,
+      passcode,
+      passlockEnabled,
+      setPasscode,
+      setPasslockEnabled,
       addFolder, 
       deleteFolder, 
       addNote, 
-      updateNote,
+      updateNote, 
       deleteNote,
       addWorkspace,
+      addMemberToWorkspace,
+      updateWorkspace,
+      deleteWorkspace,
+      restoreFromTrash,
+      emptyTrash,
       getNoteCount,
       isLoaded
     }}>

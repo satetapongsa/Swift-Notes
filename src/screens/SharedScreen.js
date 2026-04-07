@@ -1,27 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  SafeAreaView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
   Image,
   StatusBar,
   Modal,
   Animated,
+  PanResponder,
   Dimensions,
   TouchableWithoutFeedback,
   Switch,
   TextInput
 } from 'react-native';
-import { 
-  Menu, 
-  Search, 
-  ChevronRight, 
-  Users, 
-  Megaphone, 
-  Code, 
+import {
+  Swipeable,
+  RectButton
+} from 'react-native-gesture-handler';
+import {
+  Menu,
+  Search,
+  ChevronRight,
+  Users,
+  UserPlus, // Added missing icon
+  Megaphone,
+  Code,
   Brush,
   MoreVertical,
   Share2,
@@ -46,13 +52,33 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const SharedScreen = ({ navigation }) => {
   const { colors, typography, isDark } = useTheme();
-  const { workspaces, addWorkspace } = useNotes();
+  const { workspaces, addWorkspace, addMemberToWorkspace, updateWorkspace, deleteWorkspace } = useNotes();
   const [activeTab, setActiveTab] = useState('all');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const toastOpacity = React.useRef(new Animated.Value(0)).current;
+
+  // New Member States
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [targetWsId, setTargetWsId] = useState(null);
+
+  const handleInviteConfirm = () => {
+    if (!newMemberName.trim() || !targetWsId) return;
+
+    addMemberToWorkspace(targetWsId, newMemberName);
+    setNewMemberName('');
+    setShowInviteModal(false);
+    triggerToast('SUCCESS: Member invited!');
+  };
+
+  const openInvite = (wsId) => {
+    setTargetWsId(wsId);
+    setNewMemberName('');
+    setShowInviteModal(true);
+  };
 
   const [invitations, setInvitations] = useState([
     {
@@ -134,19 +160,21 @@ const SharedScreen = ({ navigation }) => {
   };
 
   const handleDeleteWorkspace = (id) => {
-    setWorkspaces(workspaces.filter(ws => ws.id !== id));
+    deleteWorkspace(id);
     setShowWorkspaceMenu(false);
   };
 
   const toggleLinkSharing = () => {
     if (!selectedWorkspace) return;
-    setWorkspaces(workspaces.map(ws => 
-      ws.id === selectedWorkspace.id ? { ...ws, linkEnabled: !ws.linkEnabled } : ws
-    ));
-    setSelectedWorkspace({ ...selectedWorkspace, linkEnabled: !selectedWorkspace.linkEnabled });
+    const newStatus = !selectedWorkspace.linkEnabled;
+    updateWorkspace(selectedWorkspace.id, { linkEnabled: newStatus });
+    setSelectedWorkspace({ ...selectedWorkspace, linkEnabled: newStatus });
   };
 
-  const triggerToast = () => {
+  const [toastMessage, setToastMessage] = useState('Link copied to clipboard!');
+
+  const triggerToast = (msg = 'Link copied to clipboard!') => {
+    setToastMessage(msg);
     setShowToast(true);
     Animated.sequence([
       Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
@@ -157,7 +185,7 @@ const SharedScreen = ({ navigation }) => {
 
   const getIcon = (name, color) => {
     const size = 20;
-    switch(name) {
+    switch (name) {
       case 'megaphone': return <Megaphone size={size} color={color} />;
       case 'code': return <Code size={size} color={color} />;
       case 'brush': return <Brush size={size} color={color} />;
@@ -170,7 +198,7 @@ const SharedScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-      
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: isDark ? colors.card : colors.white }]}>
         <TouchableOpacity onPress={() => setShowSidebar(true)}>
@@ -183,19 +211,19 @@ const SharedScreen = ({ navigation }) => {
       </View>
 
       <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'all' && [styles.tabActive, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('all')}
         >
           <Text style={[styles.tabText, activeTab === 'all' ? { color: colors.primary, fontWeight: '700' } : { color: colors.textSecondary }]}>All Shared</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'recent' && [styles.tabActive, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('recent')}
         >
           <Text style={[styles.tabText, activeTab === 'recent' ? { color: colors.primary, fontWeight: '700' } : { color: colors.textSecondary }]}>Recent</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'invites' && [styles.tabActive, { borderBottomColor: colors.primary }]]}
           onPress={() => setActiveTab('invites')}
         >
@@ -214,6 +242,28 @@ const SharedScreen = ({ navigation }) => {
 
         {activeTab === 'all' && (
           <>
+            {/* Active Now Section */}
+            <View style={styles.activeNowContainer}>
+              <Text style={[styles.sectionTitleTiny, { color: colors.textSecondary }]}>ACTIVE NOW</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.activeAvatarsScroll}>
+                {workspaces[0].members.map(member => (
+                  <View key={member.id} style={styles.activeMemberWrapper}>
+                    <View style={[styles.activeMemberAvatar, { backgroundColor: member.avatar }]}>
+                      <Text style={styles.avatarInitial}>{member.name[0]}</Text>
+                      <View style={styles.onlineDot} />
+                    </View>
+                    <Text style={[styles.activeMemberName, { color: colors.text }]} numberOfLines={1}>{member.name.split(' ')[0]}</Text>
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.inviteNewMember} onPress={() => openInvite(workspaces[0].id)}>
+                  <View style={[styles.inviteCircle, { borderColor: colors.border, borderStyle: 'dashed', borderWidth: 2 }]}>
+                    <Plus size={20} color={colors.placeholder} />
+                  </View>
+                  <Text style={[styles.activeMemberName, { color: colors.placeholder }]}>Invite</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Collaborative Spaces</Text>
               <TouchableOpacity onPress={() => setShowCreateModal(true)}>
@@ -223,39 +273,70 @@ const SharedScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {workspaces.map(ws => (
-              <TouchableOpacity 
-                key={ws.id} 
-                style={[styles.spaceCard, { backgroundColor: colors.card, borderColor: colors.border }]} 
-                onPress={() => navigation.navigate('WorkspaceDetail', { workspace: ws })}
-              >
-                <View style={[styles.iconBox, { backgroundColor: ws.color + '15' }]}>
-                  {getIcon(ws.iconName, ws.color)}
-                  <View style={[styles.memberBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    {ws.members.length > 1 ? (
-                       <Text style={[styles.memberText, { color: colors.text }]}>+{ws.members.length - 1}</Text>
-                    ) : (
-                       <Users size={10} color={colors.text} />
-                    )}
-                  </View>
+            {workspaces.map(ws => {
+              const renderRightActions = (progress, dragX) => {
+                const trans = dragX.interpolate({
+                  inputRange: [-100, 0],
+                  outputRange: [1, 0],
+                  extrapolate: 'clamp',
+                });
+                return (
+                  <RectButton
+                    style={[styles.deleteAction, { backgroundColor: colors.danger }]}
+                    onPress={() => deleteWorkspace(ws.id)}
+                  >
+                    <Animated.View style={{ transform: [{ scale: trans }] }}>
+                      <Trash2 size={24} color={colors.white} />
+                    </Animated.View>
+                  </RectButton>
+                );
+              };
+
+              return (
+                <View key={ws.id} style={{ marginBottom: 20 }}>
+                  <Swipeable
+                    renderRightActions={renderRightActions}
+                    friction={2}
+                    rightThreshold={40}
+                  >
+                    <TouchableOpacity
+                      style={[styles.spaceCard, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 0 }]}
+                      onPress={() => navigation.navigate('WorkspaceDetail', { workspace: ws })}
+                      activeOpacity={1}
+                    >
+                      <View style={[styles.iconBox, { backgroundColor: ws.color + '15' }]}>
+                        {getIcon(ws.iconName, ws.color)}
+                        <View style={[styles.memberBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                          {ws.members.length > 1 ? (
+                            <Text style={[styles.memberText, { color: colors.text }]}>+{ws.members.length - 1}</Text>
+                          ) : (
+                            <Users size={10} color={colors.text} />
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.spaceContent}>
+                        <Text style={[styles.spaceName, { color: colors.text }]}>{ws.name}</Text>
+                        <View style={styles.spaceMeta}>
+                          <View style={[styles.roleBadge, { backgroundColor: ws.role === 'Owner' || ws.role === 'Admin' ? colors.primary + '20' : (isDark ? '#3A3A3C' : '#F2F2F7') }]}>
+                            <Text style={[styles.roleText, { color: ws.role === 'Owner' || ws.role === 'Admin' ? colors.primary : colors.textSecondary }]}>{ws.role}</Text>
+                          </View>
+                          <Text style={styles.sep}>•</Text>
+                          <Text style={[styles.activityText, { color: colors.success }]}>Active now</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity onPress={() => openWorkspaceMenu(ws)} style={styles.moreBtn}>
+                        <MoreVertical size={20} color={colors.placeholder} />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  </Swipeable>
                 </View>
-                <View style={styles.spaceContent}>
-                  <Text style={[styles.spaceName, { color: colors.text }]}>{ws.name}</Text>
-                  <View style={styles.spaceMeta}>
-                    <View style={[styles.roleBadge, { backgroundColor: ws.role === 'Owner' || ws.role === 'Admin' ? colors.primary : (isDark ? '#3A3A3C' : '#E9E9EB') }]}>
-                      <Text style={[styles.roleText, { color: ws.role === 'Owner' || ws.role === 'Admin' ? colors.white : colors.primary }]}>{ws.role}</Text>
-                    </View>
-                    <Text style={styles.sep}>•</Text>
-                    <Text style={[styles.activityText, { color: colors.textSecondary }]}>{ws.activity}</Text>
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => openWorkspaceMenu(ws)}>
-                  <MoreVertical size={20} color={colors.placeholder} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
+              );
+            })}
+
+
           </>
         )}
+
 
         {activeTab === 'recent' && (
           <>
@@ -281,17 +362,17 @@ const SharedScreen = ({ navigation }) => {
           <>
             <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 20 }]}>Pending Invitations</Text>
             {invitations.length === 0 ? (
-               <View style={styles.emptyState}>
-                 <Inbox size={48} color={colors.placeholder} opacity={0.5} />
-                 <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 16 }}>No pending invites</Text>
-                 <Text style={{ color: colors.placeholder, fontSize: 14, textAlign: 'center', marginTop: 4 }}>When someone invites you to a space, it will appear here.</Text>
-               </View>
+              <View style={styles.emptyState}>
+                <Inbox size={48} color={colors.placeholder} opacity={0.5} />
+                <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 16 }}>No pending invites</Text>
+                <Text style={{ color: colors.placeholder, fontSize: 14, textAlign: 'center', marginTop: 4 }}>When someone invites you to a space, it will appear here.</Text>
+              </View>
             ) : (
               invitations.map(invite => (
                 <View key={invite.id} style={[styles.inviteCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.inviteHeader}>
                     <View style={[styles.avatarCircleSmall, { backgroundColor: invite.avatar }]}>
-                       <Text style={{ fontWeight: '800', color: '#FFF', fontSize: 12 }}>{invite.sender[0]}</Text>
+                      <Text style={{ fontWeight: '800', color: '#FFF', fontSize: 12 }}>{invite.sender[0]}</Text>
                     </View>
                     <View style={{ flex: 1, marginLeft: 12 }}>
                       <Text style={[styles.inviteSender, { color: colors.text }]}>{invite.sender}</Text>
@@ -331,8 +412,8 @@ const SharedScreen = ({ navigation }) => {
             <Text style={[styles.noteSnippet, { color: colors.textSecondary }]} numberOfLines={2}>{note.snippet}</Text>
             <View style={styles.noteFooter}>
               <View style={styles.avatarGroup}>
-                 <View style={[styles.avatar, { backgroundColor: '#FFD1D1' }]} />
-                 <View style={[styles.avatar, { backgroundColor: '#D1E8FF', marginLeft: -8 }]} />
+                <View style={[styles.avatar, { backgroundColor: '#FFD1D1' }]} />
+                <View style={[styles.avatar, { backgroundColor: '#D1E8FF', marginLeft: -8 }]} />
               </View>
               <Text style={[styles.sharedInfoText, { color: colors.textSecondary }]}>SHARED WITH {note.sharedWith.toUpperCase()}</Text>
             </View>
@@ -362,53 +443,53 @@ const SharedScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.creationPreviewRow}>
-               <View style={[styles.iconPreviewBox, { backgroundColor: selectedWsColor + '20' }]}>
-                  {getIcon(selectedWsIcon, selectedWsColor)}
-               </View>
-               <TextInput 
-                 style={[styles.createInput, { color: colors.text, borderBottomColor: colors.border }]}
-                 placeholder="Workspace Name"
-                 placeholderTextColor={colors.placeholder}
-                 value={newWsName}
-                 onChangeText={setNewWsName}
-                 autoFocus
-               />
+              <View style={[styles.iconPreviewBox, { backgroundColor: selectedWsColor + '20' }]}>
+                {getIcon(selectedWsIcon, selectedWsColor)}
+              </View>
+              <TextInput
+                style={[styles.createInput, { color: colors.text, borderBottomColor: colors.border }]}
+                placeholder="Workspace Name"
+                placeholderTextColor={colors.placeholder}
+                value={newWsName}
+                onChangeText={setNewWsName}
+                autoFocus
+              />
             </View>
 
             <Text style={[styles.settingLabel, { color: colors.textSecondary }]}>SELECT ICON</Text>
             <View style={styles.iconSelectionGrid}>
-               {creationIcons.map(item => (
-                 <TouchableOpacity 
-                   key={item.name}
-                   style={[
-                     styles.iconItemBlock, 
-                     { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
-                     selectedWsIcon === item.name && { backgroundColor: selectedWsColor + '30', borderColor: selectedWsColor, borderWidth: 2 }
-                   ]}
-                   onPress={() => setSelectedWsIcon(item.name)}
-                 >
-                   <item.component size={24} color={selectedWsIcon === item.name ? selectedWsColor : colors.textSecondary} />
-                 </TouchableOpacity>
-               ))}
+              {creationIcons.map(item => (
+                <TouchableOpacity
+                  key={item.name}
+                  style={[
+                    styles.iconItemBlock,
+                    { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
+                    selectedWsIcon === item.name && { backgroundColor: selectedWsColor + '30', borderColor: selectedWsColor, borderWidth: 2 }
+                  ]}
+                  onPress={() => setSelectedWsIcon(item.name)}
+                >
+                  <item.component size={24} color={selectedWsIcon === item.name ? selectedWsColor : colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
             </View>
 
             <Text style={[styles.settingLabel, { color: colors.textSecondary }]}>THEME COLOR</Text>
             <View style={styles.colorSelectionGrid}>
-               {wsColors.map(color => (
-                 <TouchableOpacity 
-                    key={color}
-                    style={[
-                      styles.colorCircle, 
-                      { backgroundColor: color },
-                      selectedWsColor === color && { borderWidth: 3, borderColor: colors.text, transform: [{ scale: 1.1 }] }
-                    ]}
-                    onPress={() => setSelectedWsColor(color)}
-                 />
-               ))}
+              {wsColors.map(color => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorCircle,
+                    { backgroundColor: color },
+                    selectedWsColor === color && { borderWidth: 3, borderColor: colors.text, transform: [{ scale: 1.1 }] }
+                  ]}
+                  onPress={() => setSelectedWsColor(color)}
+                />
+              ))}
             </View>
 
-            <TouchableOpacity 
-              style={[styles.confirmCreateButton, { backgroundColor: colors.primary }]} 
+            <TouchableOpacity
+              style={[styles.confirmCreateButton, { backgroundColor: colors.primary }]}
               onPress={handleCreateWorkspace}
             >
               <Text style={{ color: colors.white, fontWeight: '800', fontSize: 18 }}>Create Workspace</Text>
@@ -437,20 +518,20 @@ const SharedScreen = ({ navigation }) => {
                 <X size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Collaborate with your team. Anyone with the link can join if enabled.</Text>
-            
+
             <View style={[styles.shareToggleRow, { borderBottomColor: colors.border }]}>
-               <View style={{ flex: 1 }}>
-                 <Text style={[styles.toggleLabel, { color: colors.text }]}>Link Sharing</Text>
-                 <Text style={[styles.toggleDesc, { color: colors.textSecondary }]}>{selectedWorkspace?.linkEnabled ? 'Anyone with link can join' : 'Only invited members'}</Text>
-               </View>
-               <Switch 
-                 value={selectedWorkspace?.linkEnabled} 
-                 onValueChange={toggleLinkSharing}
-                 trackColor={{ false: '#767577', true: colors.primary }}
-                 thumbColor={colors.white}
-               />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleLabel, { color: colors.text }]}>Link Sharing</Text>
+                <Text style={[styles.toggleDesc, { color: colors.textSecondary }]}>{selectedWorkspace?.linkEnabled ? 'Anyone with link can join' : 'Only invited members'}</Text>
+              </View>
+              <Switch
+                value={selectedWorkspace?.linkEnabled}
+                onValueChange={toggleLinkSharing}
+                trackColor={{ false: '#767577', true: colors.primary }}
+                thumbColor={colors.white}
+              />
             </View>
 
             {selectedWorkspace?.linkEnabled && (
@@ -464,10 +545,10 @@ const SharedScreen = ({ navigation }) => {
             )}
 
             <View style={styles.memberHeader}>
-               <Text style={[styles.memberSectionTitle, { color: colors.text }]}>Members</Text>
-               <View style={[styles.memberBadgeSmall, { backgroundColor: colors.primary }]}>
-                 <Text style={{ color: colors.white, fontSize: 10, fontWeight: '800' }}>{selectedWorkspace?.members.length}</Text>
-               </View>
+              <Text style={[styles.memberSectionTitle, { color: colors.text }]}>Members</Text>
+              <View style={[styles.memberBadgeSmall, { backgroundColor: colors.primary }]}>
+                <Text style={{ color: colors.white, fontSize: 10, fontWeight: '800' }}>{selectedWorkspace?.members.length}</Text>
+              </View>
             </View>
 
             <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={false}>
@@ -509,9 +590,9 @@ const SharedScreen = ({ navigation }) => {
           <View style={[styles.actionSheet, { backgroundColor: colors.card }]}>
             <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionSheetTitle, { color: colors.textSecondary }]}>WORKSPACE OPTIONS</Text>
-            
-            <TouchableOpacity 
-              style={[styles.actionItem, { borderBottomColor: colors.border }]} 
+
+            <TouchableOpacity
+              style={[styles.actionItem, { borderBottomColor: colors.border }]}
               onPress={() => { setShowWorkspaceMenu(false); setShowShareModal(true); }}
             >
               <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
@@ -524,8 +605,8 @@ const SharedScreen = ({ navigation }) => {
               <ChevronRight size={20} color={colors.placeholder} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.actionItem} 
+            <TouchableOpacity
+              style={styles.actionItem}
               onPress={() => handleDeleteWorkspace(selectedWorkspace?.id)}
             >
               <View style={[styles.actionIcon, { backgroundColor: colors.danger + '15' }]}>
@@ -537,9 +618,9 @@ const SharedScreen = ({ navigation }) => {
               </View>
               <ChevronRight size={20} color={colors.placeholder} />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]} 
+
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
               onPress={() => setShowWorkspaceMenu(false)}
             >
               <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
@@ -561,11 +642,56 @@ const SharedScreen = ({ navigation }) => {
             <View style={styles.sidebarBackdrop} />
           </TouchableWithoutFeedback>
           <View style={styles.sidebarContainer}>
-            <Sidebar 
-              navigation={navigation} 
-              onClose={() => setShowSidebar(false)} 
-              currentRoute="Shared" 
+            <Sidebar
+              navigation={navigation}
+              onClose={() => setShowSidebar(false)}
+              currentRoute="Shared"
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Invite Member Modal */}
+      <Modal
+        visible={showInviteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowInviteModal(false)}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <TouchableWithoutFeedback onPress={() => setShowInviteModal(false)}>
+            <View style={styles.sidebarBackdrop} />
+          </TouchableWithoutFeedback>
+          <View style={[styles.inviteModalCard, { backgroundColor: colors.card }]}>
+            <View style={styles.inviteHeaderSmall}>
+              <View style={[styles.inviteIconBox, { backgroundColor: colors.primary + '15' }]}>
+                <UserPlus size={24} color={colors.primary} />
+              </View>
+              <Text style={[styles.inviteModalTitle, { color: colors.text }]}>Share Workspace</Text>
+            </View>
+
+            <Text style={[styles.inviteInstruction, { color: colors.textSecondary }]}>Type the name of the colleague or friend you want to invite.</Text>
+
+            <TextInput
+              style={[styles.inviteInput, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}
+              placeholder="Friend's Name"
+              placeholderTextColor={colors.placeholder}
+              value={newMemberName}
+              onChangeText={setNewMemberName}
+              autoFocus
+            />
+
+            <View style={styles.inviteActionRow}>
+              <TouchableOpacity onPress={() => setShowInviteModal(false)} style={styles.cancelLink}>
+                <Text style={{ color: colors.placeholder, fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inviteConfirmBtn, { backgroundColor: colors.primary }]}
+                onPress={handleInviteConfirm}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '800' }}>Invite Now</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -574,7 +700,7 @@ const SharedScreen = ({ navigation }) => {
       {showToast && (
         <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
           <CheckCircle2 size={20} color={colors.white} />
-          <Text style={styles.toastText}>Link copied to clipboard!</Text>
+          <Text style={styles.toastText}>{toastMessage}</Text>
         </Animated.View>
       )}
     </SafeAreaView>
@@ -1082,6 +1208,150 @@ const styles = StyleSheet.create({
   acceptBtn: {
     // backgroundColor set dynamically
   },
+  // New Collaboration Styles
+  activeNowContainer: {
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  sectionTitleTiny: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginBottom: 15,
+    opacity: 0.6,
+  },
+  activeAvatarsScroll: {
+    paddingLeft: 2,
+  },
+  activeMemberWrapper: {
+    alignItems: 'center',
+    marginRight: 20,
+    width: 60,
+  },
+  activeMemberAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    position: 'relative',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  avatarInitial: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#34C759',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  activeMemberName: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  inviteNewMember: {
+    alignItems: 'center',
+    width: 60,
+  },
+  inviteCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  moreBtn: {
+    padding: 8,
+    marginLeft: 5,
+  },
+  deleteAction: {
+    width: 90,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    marginLeft: 10,
+  },
+  // New Invite Modal Styles
+  modalOverlayCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  inviteModalCard: {
+    width: '100%',
+    borderRadius: 30,
+    padding: 24,
+    elevation: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  inviteHeaderSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  inviteIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  inviteModalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  inviteInstruction: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+    opacity: 0.8,
+  },
+  inviteInput: {
+    width: '100%',
+    height: 56,
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    marginBottom: 25,
+    borderWidth: 1,
+  },
+  inviteActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cancelLink: {
+    padding: 10,
+  },
+  inviteConfirmBtn: {
+    paddingHorizontal: 25,
+    paddingVertical: 14,
+    borderRadius: 16,
+    minWidth: 140,
+    alignItems: 'center',
+  },
 });
 
 export default SharedScreen;
+
+

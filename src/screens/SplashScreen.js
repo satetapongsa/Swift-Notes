@@ -5,30 +5,61 @@ import {
   StyleSheet, 
   Animated,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Dimensions
 } from 'react-native';
 import { Colors, Typography } from '../theme/theme';
 import { StickyNote } from 'lucide-react-native';
 
+const { width } = Dimensions.get('window');
+
 const SplashScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Sequence of animations for a premium feel
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 1000,
         useNativeDriver: true,
       }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceAnim, {
+            toValue: -15,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          })
+        ])
+      ),
       Animated.timing(progressAnim, {
         toValue: 1,
-        duration: 3000,
+        duration: 2500,
         useNativeDriver: false,
       })
-    ]).start(() => {
+    ]).start();
+
+    // Navigate to Login after animation
+    const timer = setTimeout(() => {
       navigation.replace('Login');
-    });
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const progressInterpolate = progressAnim.interpolate({
@@ -39,22 +70,31 @@ const SplashScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+      <Animated.View 
+        style={[
+          styles.content, 
+          { 
+            opacity: fadeAnim,
+            transform: [
+              { scale: scaleAnim },
+              { translateY: bounceAnim }
+            ]
+          }
+        ]}
+      >
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <StickyNote size={64} color={Colors.white} />
-          </View>
-          <Text style={styles.appName}>SwiftNotes</Text>
-          <Text style={styles.tagline}>Smart capture, effortless recall</Text>
+          <StickyNote size={80} color={Colors.white} strokeWidth={1.5} />
         </View>
-
-        <View style={styles.footer}>
-          <View style={styles.progressBar}>
-            <Animated.View style={[styles.progressFill, { width: progressInterpolate }]} />
-          </View>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
-        </View>
+        <Text style={styles.appName}>SwiftNotes</Text>
+        <Text style={styles.tagline}>Intelligent Capture. Creative Flow.</Text>
       </Animated.View>
+
+      <View style={styles.footer}>
+        <View style={styles.progressTrack}>
+          <Animated.View style={[styles.progressBar, { width: progressInterpolate }]} />
+        </View>
+        <Text style={styles.securedText}>SECURED WITH AI TECHNOLOGY</Text>
+      </View>
     </SafeAreaView>
   );
 };
@@ -68,76 +108,64 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
-    marginBottom: 100,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 30,
+    width: 140,
+    height: 140,
+    borderRadius: 40,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    elevation: 8,
+    marginBottom: 24,
+    // Premium Shadow
+    elevation: 12,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
   },
-  logoBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-  },
-  penIcon: {
-      position: 'absolute',
-      bottom: -10,
-      right: -10,
-  },
-  title: {
+  appName: {
     ...Typography.h1,
     fontSize: 42,
-    marginTop: 10,
+    fontWeight: '900',
+    color: '#1C1C1E',
+    letterSpacing: -1,
   },
-  subtitle: {
+  tagline: {
     ...Typography.body,
     color: Colors.textSecondary,
-    marginTop: 10,
-    fontSize: 18,
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: '500',
+    opacity: 0.8,
   },
   footer: {
     position: 'absolute',
-    bottom: 50,
-    width: '80%',
+    bottom: 60,
+    width: width * 0.7,
     alignItems: 'center',
-  },
-  preparingText: {
-    ...Typography.caption,
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  dots: {
-      color: Colors.primary,
   },
   progressTrack: {
     width: '100%',
-    height: 4,
+    height: 6,
     backgroundColor: Colors.lightGray,
-    borderRadius: 2,
+    borderRadius: 3,
     marginBottom: 20,
     overflow: 'hidden',
   },
   progressBar: {
-    height: 4,
+    height: '100%',
     backgroundColor: Colors.primary,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   securedText: {
-    ...Typography.small,
+    fontSize: 11,
     letterSpacing: 2,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.placeholder,
+    textTransform: 'uppercase',
   },
 });
 
 export default SplashScreen;
+

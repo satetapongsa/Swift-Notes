@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,10 @@ import {
   TouchableOpacity, 
   TextInput,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Colors, Typography } from '../theme/theme';
 import { 
@@ -15,16 +18,55 @@ import {
   Send, 
   Zap, 
   Sparkles,
-  ChevronRight
+  RefreshCcw,
+  Copy,
+  Check
 } from 'lucide-react-native';
+import AIService from '../services/AIService';
 
-const AINoteScreen = ({ navigation }) => {
+const AINoteScreen = ({ route, navigation }) => {
+  const { title, content } = route.params || {};
+  const [inputText, setInputText] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const suggestions = [
     'Summarize this',
-    'Change tone to professional',
-    'Add more details',
-    'Shorten this content'
+    'Generate action items',
+    'Rewrite to be formal',
+    'Suggest a title'
   ];
+
+  const handleAISubmission = async (prompt) => {
+    if (!prompt && !inputText) return;
+    
+    const finalPrompt = prompt || inputText;
+    setIsLoading(true);
+    setAiResponse('');
+    
+    try {
+      const response = await AIService.generateResponse(finalPrompt, content);
+      setAiResponse(response);
+    } catch (error) {
+      setAiResponse("Sorry, I encountered an error connecting to the AI brain. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setInputText('');
+    }
+  };
+
+  const handleCopy = () => {
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Initial greeting or summary
+  useEffect(() => {
+    if (content) {
+      handleAISubmission('Summarize this note for me');
+    }
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -38,59 +80,88 @@ const AINoteScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Swift AI</Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.doneText}>Done</Text>
+          <Text style={styles.doneText}>Close</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.statusLabel}>
-          <View style={styles.dot} />
-          <Text style={styles.statusText}>AI GENERATING CONTENT</Text>
-        </View>
-
-        <Text style={styles.noteTitle}>Travel Blog: Hidden Gems of Kyoto</Text>
-        
-        <View style={styles.quoteBox}>
-          <Text style={styles.quoteText}>
-            "Create an outline for a travel blog focused on the quieter side of Kyoto."
+          <View style={[styles.dot, { backgroundColor: isLoading ? Colors.primary : Colors.success }]} />
+          <Text style={[styles.statusText, { color: isLoading ? Colors.primary : Colors.success }]}>
+            {isLoading ? 'AI GENERATING CONTENT...' : 'AI ASSISTANT READY'}
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>1. Introduction: Beyond the Golden Pavilion</Text>
-        <Text style={styles.paragraph}>
-          While Kinkaku-ji and Fushimi Inari are breathtaking, Kyoto's soul often lies in the narrow alleyways of Arashiyama's north side and the quiet temples of Sakyo-ku. This post explores the "Slow Kyoto" experience.
-        </Text>
-
-        <Text style={styles.sectionTitle}>2. The Bamboo Forest You Didn't Know</Text>
-        <Text style={styles.paragraph}>
-          Away from the crowds, the Otagi Nenbutsu-ji Temple offers a surreal and peaceful bamboo experience with over 1,200 unique stone statues...
-        </Text>
+        <Text style={styles.noteTitle}>{title || 'Untitled Note'}</Text>
         
-        <View style={{ height: 100 }} />
+        {/* User Prompt Display */}
+        {inputText === '' && !isLoading && !aiResponse && (
+          <View style={styles.emptyState}>
+            <Sparkles size={48} color={Colors.placeholder} />
+            <Text style={styles.emptyText}>Ask me to summarize, rewrite, or analyze your note.</Text>
+          </View>
+        )}
+
+        {aiResponse !== '' && (
+          <View style={styles.aiResultContainer}>
+            <View style={styles.resultHeader}>
+              <Sparkles size={18} color={Colors.primary} />
+              <Text style={styles.resultLabel}>AI GENERATED RESPONSE</Text>
+              <TouchableOpacity onPress={handleCopy} style={styles.copyButton}>
+                {copied ? <Check size={16} color={Colors.success} /> : <Copy size={16} color={Colors.textSecondary} />}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.aiResponseText}>{aiResponse}</Text>
+          </View>
+        )}
+
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Thinking...</Text>
+          </View>
+        )}
+        
+        <View style={{ height: 150 }} />
       </ScrollView>
 
       {/* AI Input Area */}
-      <View style={styles.aiInputArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.aiInputArea}
+      >
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionBar}>
           {suggestions.map(s => (
-            <TouchableOpacity key={s} style={styles.suggestionPill}>
+            <TouchableOpacity 
+              key={s} 
+              style={styles.suggestionPill}
+              onPress={() => handleAISubmission(s)}
+              disabled={isLoading}
+            >
               <Text style={styles.suggestionText}>{s}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
         
         <View style={styles.inputCard}>
-          <Zap size={20} color={Colors.primary} style={{ marginRight: 10 }} />
+          <Zap size={20} color={isDark ? Colors.white : Colors.primary} style={{ marginRight: 10 }} />
           <TextInput 
             style={styles.input}
-            placeholder="Edit with AI (e.g., 'make it more...')"
+            placeholder="Ask anything about this note..."
             placeholderTextColor={Colors.placeholder}
+            value={inputText}
+            onChangeText={setInputText}
+            onSubmitEditing={() => handleAISubmission()}
           />
-          <TouchableOpacity style={styles.sendButton}>
+          <TouchableOpacity 
+            style={[styles.sendButton, { opacity: inputText || !isLoading ? 1 : 0.5 }]} 
+            onPress={() => handleAISubmission()}
+            disabled={!inputText || isLoading}
+          >
             <Send size={20} color={Colors.white} />
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -137,57 +208,72 @@ const styles = StyleSheet.create({
   statusLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#5856D6',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginRight: 10,
   },
   statusText: {
-    ...Typography.small,
+    fontSize: 12,
     letterSpacing: 1,
-    color: '#5856D6',
     fontWeight: '800',
   },
   noteTitle: {
     ...Typography.h1,
-    fontSize: 34,
-    marginBottom: 20,
+    fontSize: 28,
+    marginBottom: 24,
   },
-  quoteBox: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#E5E5EA',
-    paddingLeft: 20,
-    marginBottom: 30,
-    marginVertical: 10,
+  emptyState: {
+    marginTop: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  quoteText: {
+  emptyText: {
     ...Typography.body,
-    fontSize: 18,
-    fontStyle: 'italic',
-    color: Colors.textSecondary,
+    color: Colors.placeholder,
+    textAlign: 'center',
+    marginTop: 15,
+    paddingHorizontal: 40,
+  },
+  aiResultContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    marginBottom: 30,
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  resultLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginLeft: 8,
+    flex: 1,
+  },
+  aiResponseText: {
+    ...Typography.body,
+    fontSize: 17,
+    color: Colors.text,
     lineHeight: 26,
   },
-  sectionTitle: {
-    ...Typography.h2,
-    fontSize: 22,
-    marginBottom: 15,
-    marginTop: 10,
+  loadingContainer: {
+    alignItems: 'center',
+    marginTop: 40,
   },
-  paragraph: {
-    ...Typography.body,
-    fontSize: 16,
-    color: Colors.text,
-    lineHeight: 24,
-    marginBottom: 20,
+  loadingText: {
+    ...Typography.small,
+    marginTop: 15,
+    color: Colors.textSecondary,
   },
   aiInputArea: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
     backgroundColor: Colors.white,
     paddingVertical: 15,
     paddingHorizontal: 20,
@@ -204,10 +290,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
     marginRight: 10,
-    backgroundColor: Colors.white,
+    backgroundColor: '#F8F9FA',
   },
   suggestionText: {
-    ...Typography.small,
     fontSize: 12,
     color: Colors.textSecondary,
     fontWeight: '600',
@@ -216,7 +301,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F2F2F7',
-    borderRadius: 15,
+    borderRadius: 18,
     paddingHorizontal: 15,
     height: 56,
   },
@@ -226,13 +311,17 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#5856D6',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  copyButton: {
+    padding: 5,
+  }
 });
 
 export default AINoteScreen;
+
