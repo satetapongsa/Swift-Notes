@@ -1,171 +1,167 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 
 const NoteContext = createContext();
 
 export const NoteProvider = ({ children }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [session, setSession] = useState(null);
   const [folders, setFolders] = useState([
     {
       id: 'default',
       name: 'All Notes',
       iconName: 'folder',
       color: '#007AFF',
-      modified: 'Modified 2 hours ago',
+      modified: 'Modified now',
       hasStar: true
-    },
-    {
-      id: '1',
-      name: 'Work',
-      iconName: 'briefcase',
-      color: '#5856D6',
-      modified: 'Modified yesterday',
-    },
-    {
-      id: '2',
-      name: 'Personal',
-      iconName: 'user',
-      color: '#34C759',
-      modified: 'Modified 3 days ago',
-    },
-  ]);
-
-  const [notes, setNotes] = useState([
-    {
-      id: 1,
-      title: 'Project Alpha Requirements',
-      content: 'Brainstorming session for the new platform architecture...',
-      date: 'Oct 12, 2023',
-      folderId: '1',
-      workspaceId: null,
-      tags: ['Design', 'UX'],
-      isPinned: true
-    },
-    {
-      id: 2,
-      title: 'Weekly Sync Notes',
-      content: 'Action items from team meeting: 1. Review budget 2. Hire QA...',
-      date: 'Oct 10, 2023',
-      folderId: '1',
-      workspaceId: null,
-      tags: ['Work'],
-    },
-  ]);
-
-  const [workspaces, setWorkspaces] = useState([
-    {
-      id: 'ws-1',
-      name: 'SwiftTeam App Design',
-      role: 'Owner',
-      activity: 'Active now',
-      color: '#007AFF',
-      iconName: 'briefcase',
-      members: [
-        { id: 'me', name: 'Alex (You)', role: 'Admin', avatar: '#FF9500' },
-        { id: '2', name: 'Ben', role: 'Editor', avatar: '#34C759' }
-      ]
-    },
-    {
-      id: 'ws-2',
-      name: 'Marketing Campaign',
-      role: 'Member',
-      activity: '2 hours ago',
-      color: '#FF2D55',
-      iconName: 'plane',
-      members: [
-        { id: 'me', name: 'Alex (You)', role: 'Reader', avatar: '#FF9500' },
-        { id: '3', name: 'Cathy', role: 'Owner', avatar: '#5856D6' }
-      ]
     }
   ]);
+
+  const [notes, setNotes] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
+
 
   const [trash, setTrash] = useState({ workspaces: [], notes: [] });
   const [passcode, setPasscode] = useState(null);
   const [passlockEnabled, setPasslockEnabled] = useState(false); // New Persistent State
 
+  // 1. ตักตามสถานะการล็อกอิน (Auth Tracking)
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const savedFolders = await AsyncStorage.getItem('folders');
-        const savedNotes = await AsyncStorage.getItem('notes');
-        const savedWorkspaces = await AsyncStorage.getItem('workspaces');
-        const savedTrash = await AsyncStorage.getItem('trash');
-        const savedPasscode = await AsyncStorage.getItem('passcode');
-        const savedPasslock = await AsyncStorage.getItem('passlockEnabled');
-        
-        if (savedFolders) setFolders(JSON.parse(savedFolders));
-        if (savedNotes) setNotes(JSON.parse(savedNotes));
-        if (savedWorkspaces) setWorkspaces(JSON.parse(savedWorkspaces));
-        if (savedTrash) setTrash(JSON.parse(savedTrash));
-        if (savedPasscode) setPasscode(savedPasscode);
-        if (savedPasslock) setPasslockEnabled(JSON.parse(savedPasslock));
-        
-        setIsLoaded(true);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setIsLoaded(true);
-      }
-    };
-    loadData();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  // 2. ดึงข้อมูลจากฐานข้อมูลจริง (Fetching Data)
   useEffect(() => {
-    const saveData = async () => {
+    const fetchCloudData = async () => {
+      if (!session) return;
+      
       try {
-        if (isLoaded) {
-          await AsyncStorage.setItem('folders', JSON.stringify(folders));
-          await AsyncStorage.setItem('notes', JSON.stringify(notes));
-          await AsyncStorage.setItem('workspaces', JSON.stringify(workspaces));
-          await AsyncStorage.setItem('trash', JSON.stringify(trash));
-          await AsyncStorage.setItem('passlockEnabled', JSON.stringify(passlockEnabled));
-          if (passcode) await AsyncStorage.setItem('passcode', passcode);
+        // ดึงโน้ต
+        const { data: cloudNotes, error: notesError } = await supabase
+          .from('notes')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('updated_at', { ascending: false });
+
+        if (cloudNotes) setNotes(cloudNotes);
+
+        // ดึงพื้นที่ทำงาน
+        const { data: cloudWorkspaces, error: wsError } = await supabase
+          .from('workspaces')
+          .select('*, workspace_members(role, profiles(*))')
+          .eq('owner_id', session.user.id);
+          
+        if (cloudWorkspaces) setWorkspaces(cloudWorkspaces);
+
+        // ดึงโฟลเดอร์
+        const { data: cloudFolders } = await supabase
+          .from('folders')
+          .select('*')
+          .eq('user_id', session.user.id);
+
+        if (cloudFolders && cloudFolders.length > 0) {
+          const defaultFolder = { id: 'default', name: 'All Notes', icon_name: 'folder', color: '#007AFF', hasStar: true };
+          setFolders([defaultFolder, ...cloudFolders]);
         }
+
+        setIsLoaded(true);
       } catch (error) {
-        console.error('Error saving data:', error);
+        console.error('Fetch error:', error);
+        setIsLoaded(true);
       }
     };
-    saveData();
-  }, [folders, notes, workspaces, trash, passcode, passlockEnabled, isLoaded]);
 
-  const addFolder = (name) => {
-    const newFolder = { id: Date.now().toString(), name };
-    setFolders([...folders, newFolder]);
-  };
+    if (session) {
+      fetchCloudData();
+    } else {
+      setIsLoaded(true);
+    }
+  }, [session]);
 
-  const deleteFolder = (id) => {
-    setFolders(folders.filter(f => f.id !== id));
-  };
+  const addNote = async ({ title, content, folderId, workspaceId }) => {
+    if (!session) return;
 
-  const addNote = (title, content, folderId) => {
     const newNote = {
-      id: Date.now().toString(),
       title,
       content,
-      folderId,
-      updatedAt: new Date().toISOString()
+      folder_id: folderId || 'default',
+      workspace_id: workspaceId || null,
+      user_id: session.user.id,
+      updated_at: new Date().toISOString(),
+      link_enabled: false,
     };
-    setNotes([newNote, ...notes]);
-    return newNote;
+
+    const { data, error } = await supabase
+      .from('notes')
+      .insert([newNote])
+      .select();
+
+    if (data) {
+      setNotes([data[0], ...notes]);
+      return data[0];
+    }
   };
 
-  const updateNote = (id, title, content) => {
-    setNotes(notes.map(n => n.id === id ? { ...n, title, content, updatedAt: new Date().toISOString() } : n));
+  const updateNote = async (id, updates) => {
+    if (!session) return;
+
+    const { error } = await supabase
+      .from('notes')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (!error) {
+      setNotes(notes.map(n => n.id === id ? { ...n, ...updates } : n));
+    }
   };
 
-  const deleteNote = (id) => {
-    const noteToDelete = notes.find(n => n.id === id);
-    if (noteToDelete) {
-      setTrash(prev => ({ ...prev, notes: [noteToDelete, ...prev.notes] }));
+
+  const addFolder = async (name) => {
+    if (!session) return;
+    const { data } = await supabase
+      .from('folders')
+      .insert([{ name, user_id: session.user.id }])
+      .select();
+    
+    if (data) {
+      setFolders([...folders, data[0]]);
+    }
+  };
+
+  const deleteFolder = async (id) => {
+    if (!session || id === 'default') return;
+    const { error } = await supabase.from('folders').delete().eq('id', id);
+    if (!error) {
+      setFolders(folders.filter(f => f.id !== id));
+    }
+  };
+
+  const deleteNote = async (id) => {
+    if (!session) return;
+    const { error } = await supabase.from('notes').delete().eq('id', id);
+    if (!error) {
       setNotes(notes.filter(n => n.id !== id));
     }
   };
+
 
   const addWorkspace = (newWs) => {
     const wsWithId = {
       ...newWs,
       id: 'ws-' + Date.now(),
       activity: 'Just created',
-      members: [{ id: 'me', name: 'Alex (You)', role: 'Admin', avatar: '#FF9500' }]
+      members: [{ id: 'me', name: 'Alex (You)', role: 'Admin', avatar: '#FF9500' }],
+      linkEnabled: false,
+      shareLink: `https://swift-notes.com/join/${newWs.name.toLowerCase().replace(/\s+/g, '-')}`
     };
     setWorkspaces(prev => [wsWithId, ...prev]);
   };

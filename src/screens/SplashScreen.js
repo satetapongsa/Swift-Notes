@@ -14,7 +14,9 @@ import { StickyNote } from 'lucide-react-native';
 const { width } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
+  console.log('SplashScreen.js: Component Rendering...');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -25,25 +27,25 @@ const SplashScreen = ({ navigation }) => {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 4,
         tension: 40,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.loop(
         Animated.sequence([
           Animated.timing(bounceAnim, {
             toValue: -15,
             duration: 1500,
-            useNativeDriver: true,
+            useNativeDriver: false,
           }),
           Animated.timing(bounceAnim, {
             toValue: 0,
             duration: 1500,
-            useNativeDriver: true,
+            useNativeDriver: false,
           })
         ])
       ),

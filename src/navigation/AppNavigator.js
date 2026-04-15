@@ -1,4 +1,5 @@
 import React from 'react';
+import Linking from '../lib/LinkingProxy';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -21,6 +22,7 @@ import TrashScreen from '../screens/TrashScreen';
 import AddFolderScreen from '../screens/AddFolderScreen';
 import FolderDetailScreen from '../screens/FolderDetailScreen';
 import WorkspaceDetailScreen from '../screens/WorkspaceDetailScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -65,12 +67,30 @@ const TabNavigator = () => {
   );
 };
 
+const prefix = Linking.createURL('/');
+
 const AppNavigator = () => {
+  const linking = {
+    prefixes: [prefix, 'swift-notes://'],
+    config: {
+      screens: {
+        Main: {
+          screens: {
+            Shared: 'shared',
+          },
+        },
+        WorkspaceDetail: 'join/:id',
+      },
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+
         <Stack.Screen name="Biometric" component={BiometricScreen} />
         <Stack.Screen name="Passcode" component={PasscodeScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />

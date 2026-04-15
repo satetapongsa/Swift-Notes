@@ -1,4 +1,23 @@
 {
   "name": "SwiftNotesApp",
-  "displayName": "SwiftNotesApp"
+  "displayName": "SwiftNotesApp",
+  "expo": {
+    "name": "SwiftNotesApp",
+    "slug": "swift-notes-app",
+    "version": "1.0.0",
+    "scheme": "swift-notes",
+    "orientation": "portrait",
+
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
 }
+
+

@@ -10,7 +10,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions
+  Dimensions,
+  Switch
 } from 'react-native';
 import { 
   ChevronLeft, 
@@ -20,10 +21,17 @@ import {
   PenTool, 
   Mic, 
   Sparkles,
-  Share2
+  Share2,
+  BrainCircuit,
+  X,
+  Plus,
+  Copy
 } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useNotes } from '../context/NoteContext';
+import { AIService } from '../lib/AIService';
+import { Modal, ActivityIndicator } from 'react-native';
+
 
 const NoteEditorScreen = ({ route, navigation }) => {
   const { note, folderId, workspace } = route.params || {};
@@ -34,7 +42,31 @@ const NoteEditorScreen = ({ route, navigation }) => {
   const [content, setContent] = useState(note?.content || '');
   const [currentNoteId, setCurrentNoteId] = useState(note?.id || null);
 
-  const isInitialMount = useRef(true);
+  const [isAISummarizing, setIsAISummarizing] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  const handleAISummarize = async () => {
+    setIsAISummarizing(true);
+    setShowAIModal(true);
+    try {
+      const result = await AIService.summarizeNote(content);
+      setAiResult(result);
+    } catch (error) {
+      alert(error.message);
+      setShowAIModal(false);
+    } finally {
+      setIsAISummarizing(false);
+    }
+  };
+
+  const insertAISummary = () => {
+    if (!aiResult) return;
+    const summaryText = `\n\n--- AI Summary ---\n${aiResult.summary}\n\nKey Topics:\n${aiResult.topics.map(t => `• ${t}`).join('\n')}`;
+    setContent(prev => prev + summaryText);
+    setShowAIModal(false);
+  };
 
   // Auto-save logic
   useEffect(() => {
@@ -95,19 +127,77 @@ const NoteEditorScreen = ({ route, navigation }) => {
                )}
             </View>
           )}
+          <TouchableOpacity onPress={() => setShowShareModal(true)} style={{ marginRight: 15 }}>
+            <Share2 size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={[styles.saveText, { color: colors.primary }]}>Done</Text>
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Note Share Modal */}
+      <Modal
+        visible={showShareModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <View style={styles.modalOverlayCenter}>
+          <View style={[styles.shareModalContent, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Share Note</Text>
+              <TouchableOpacity onPress={() => setShowShareModal(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.shareToggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.shareToggleLabel, { color: colors.text }]}>Link Sharing</Text>
+                <Text style={[styles.shareToggleDesc, { color: colors.textSecondary }]}>
+                  {note?.linkEnabled ? 'Anyone with link can view' : 'Only you can access'}
+                </Text>
+              </View>
+              <Switch
+                value={note?.linkEnabled}
+                onValueChange={(val) => updateNote(currentNoteId, { linkEnabled: val })}
+                trackColor={{ false: colors.lightGray, true: colors.primary }}
+              />
+            </View>
+
+            {note?.linkEnabled && (
+              <View style={[styles.shareLinkContainer, { backgroundColor: colors.lightGray }]}>
+                <Text style={[styles.shareLinkText, { color: colors.primary }]} numberOfLines={1}>{note?.shareLink}</Text>
+                <TouchableOpacity 
+                   style={[styles.copyIconBtn, { backgroundColor: colors.primary }]}
+                   onPress={async () => {
+                     await Clipboard.setStringAsync(note.shareLink);
+                     alert('Link copied!');
+                   }}
+                >
+                  <Copy size={16} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity 
+              style={[styles.closeModalBtn, { backgroundColor: colors.lightGray }]}
+              onPress={() => setShowShareModal(false)}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Toolbar */}
       <View style={[styles.toolbar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.toolbarItem}>
           <UserPlus size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolbarItem}>
-          <List size={20} color={colors.textSecondary} />
+        <TouchableOpacity style={styles.toolbarItem} onPress={handleAISummarize}>
+          <BrainCircuit size={20} color={colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.toolbarItem}>
           <ImageIcon size={20} color={colors.textSecondary} />
@@ -147,6 +237,60 @@ const NoteEditorScreen = ({ route, navigation }) => {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* AI Summary Modal */}
+      <Modal
+        visible={showAIModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAIModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.aiHeaderTitle}>
+                <Sparkles size={24} color={colors.primary} />
+                <Text style={[styles.modalTitle, { color: colors.text, marginLeft: 10 }]}>AI Summary</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAIModal(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {isAISummarizing ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Analysing your note...</Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={[styles.aiSection, { backgroundColor: colors.primary + '10' }]}>
+                  <Text style={[styles.aiLabel, { color: colors.primary }]}>SUMMARY</Text>
+                  <Text style={[styles.aiText, { color: colors.text }]}>{aiResult?.summary}</Text>
+                </View>
+
+                <Text style={[styles.aiLabel, { color: colors.textSecondary, marginTop: 20 }]}>KEY TOPICS</Text>
+                <View style={styles.topicsGrid}>
+                  {aiResult?.topics.map((topic, index) => (
+                    <View key={index} style={[styles.topicItem, { backgroundColor: colors.lightGray }]}>
+                      <View style={[styles.topicDot, { backgroundColor: colors.primary }]} />
+                      <Text style={[styles.topicText, { color: colors.text }]}>{topic}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.insertBtn, { backgroundColor: colors.primary }]}
+                  onPress={insertAISummary}
+                >
+                  <Plus size={20} color="#FFF" />
+                  <Text style={styles.insertBtnText}>Append to Note</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -267,6 +411,141 @@ const styles = StyleSheet.create({
     minHeight: 300,
     lineHeight: 28,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    padding: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    minHeight: '60%',
+  },
+  aiHeaderTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  aiSection: {
+    padding: 20,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  aiLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  aiText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  topicsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  topicItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  topicDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 8,
+  },
+  topicText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  insertBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    marginTop: 30,
+    marginBottom: 40,
+  },
+  insertBtnText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+    marginLeft: 10,
+  },
+  modalOverlayCenter: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  shareModalContent: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 24,
+  },
+  shareToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  shareToggleLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  shareToggleDesc: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  shareLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  shareLinkText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  copyIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  closeModalBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  }
 });
+
 
 export default NoteEditorScreen;

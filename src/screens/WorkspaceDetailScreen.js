@@ -28,9 +28,23 @@ import { useNotes } from '../context/NoteContext';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const WorkspaceDetailScreen = ({ route, navigation }) => {
-  const { workspace } = route.params;
+  const { workspace: workspaceParam, id } = route.params || {};
   const { colors, isDark } = useTheme();
-  const { notes, updateNote, addNote } = useNotes();
+  const { workspaces, notes, updateNote, addNote } = useNotes();
+  
+  // Find workspace by ID if it's coming from a deep link
+  const workspace = workspaceParam || workspaces.find(ws => ws.id === id);
+
+  if (!workspace) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.text }}>Workspace not found</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Main')}>
+          <Text style={{ color: colors.primary, marginTop: 10 }}>Go back Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
   
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

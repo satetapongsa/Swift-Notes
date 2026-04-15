@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import {
   View,
   Text,
@@ -181,6 +182,13 @@ const SharedScreen = ({ navigation }) => {
       Animated.delay(1500),
       Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true })
     ]).start(() => setShowToast(false));
+  };
+
+  const handleCopyToClipboard = async () => {
+    if (selectedWorkspace?.shareLink) {
+      await Clipboard.setStringAsync(selectedWorkspace.shareLink);
+      triggerToast('Link copied to clipboard!');
+    }
   };
 
   const getIcon = (name, color) => {
@@ -537,7 +545,7 @@ const SharedScreen = ({ navigation }) => {
             {selectedWorkspace?.linkEnabled && (
               <View style={[styles.linkCard, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
                 <Text style={[styles.linkText, { color: colors.primary }]} numberOfLines={1}>{selectedWorkspace?.shareLink}</Text>
-                <TouchableOpacity style={[styles.copyButton, { backgroundColor: colors.primary }]} onPress={triggerToast}>
+                <TouchableOpacity style={[styles.copyButton, { backgroundColor: colors.primary }]} onPress={handleCopyToClipboard}>
                   <Copy size={18} color={colors.white} />
                   <Text style={{ color: colors.white, fontWeight: '700', marginLeft: 8 }}>Copy</Text>
                 </TouchableOpacity>
