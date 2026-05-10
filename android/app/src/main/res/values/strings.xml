@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SwiftNotes</string>
-    <string name="title_activity_main">SwiftNotes</string>
+    <string name="app_name">Swift Notes</string>
+    <string name="title_activity_main">Swift Notes</string>
     <string name="package_name">com.satetapongsa.swiftnotes</string>
     <string name="custom_url_scheme">com.satetapongsa.swiftnotes</string>
 </resources>
