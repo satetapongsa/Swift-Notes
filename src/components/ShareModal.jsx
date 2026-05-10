@@ -23,7 +23,7 @@ const ShareModal = ({ isOpen, onClose, noteId }) => {
     <div className="share-modal-overlay" onClick={onClose}>
       <div className="share-modal-container scale-in" onClick={e => e.stopPropagation()}>
         <button className="close-modal-btn glass" onClick={onClose}>
-          <X size={20} />
+          <X size={20} color="white" />
         </button>
 
         <div className="share-modal-header">

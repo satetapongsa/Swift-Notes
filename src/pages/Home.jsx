@@ -140,7 +140,7 @@ const Home = () => {
                 <h2 style={{ margin: 0, fontSize: '1.4rem' }}>New Note</h2>
               </div>
               <button onClick={() => setIsNoteModalOpen(false)} className="glass" style={{ width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={20} />
+                <X size={20} color="white" />
               </button>
             </div>
 

@@ -129,7 +129,7 @@ const NoteEditor = () => {
     <div className="editor-page fade-in">
       <header className="editor-header">
         <button onClick={handleBack} className="back-btn glass">
-          <ChevronLeft size={24} />
+          <ChevronLeft size={24} color="white" />
         </button>
         
         <div className="status-info">
@@ -138,10 +138,10 @@ const NoteEditor = () => {
 
         <div className="header-actions">
           <button onClick={() => setIsShareModalOpen(true)} className="glass" style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Share2 size={20} />
+            <Share2 size={20} color="white" />
           </button>
           <button onClick={handleDone} className="done-btn">
-            <Check size={20} />
+            <Check size={20} color="white" />
             <span>Done</span>
           </button>
         </div>
@@ -177,7 +177,7 @@ const NoteEditor = () => {
         
         <div className="toolbar-right">
           <button onClick={handleDelete} className="toolbar-btn">
-            <Trash2 size={20} />
+            <Trash2 size={20} color="white" />
           </button>
           <span className="char-count">{content.length} chars</span>
         </div>
