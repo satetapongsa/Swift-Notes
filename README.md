@@ -2,7 +2,7 @@
 
 **Swift Notes** is a premium, minimalist note-taking application designed for speed, security, and intelligent organization. Built with a modern tech stack and a stunning glassmorphism aesthetic, it provides a seamless writing experience across all your devices.
 
-![Swift Notes Banner](C:\Users\ACER\.gemini\antigravity\brain\9e96b220-5747-4444-b052-d54c8a5a1853\swift_notes_banner_1778448772793.png)
+![Swift Notes Banner](public/banner.png)
 
 ## 🚀 Key Features
 
