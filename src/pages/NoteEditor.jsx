@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, Check, Trash2, Clock, Share2 } from 'lucide-react';
+import { ChevronLeft, Check, Trash2, Clock, Share2, Sparkles, Loader2 } from 'lucide-react';
 import { noteService } from '../lib/noteService';
+import { aiService } from '../lib/aiService';
 import './NoteEditor.css';
 import ShareModal from '../components/ShareModal';
 
@@ -17,16 +18,12 @@ const NoteEditor = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [type, setType] = useState('general');
-  const [color, setColor] = useState(null);
   const [folderId, setFolderId] = useState(folderIdFromQuery || null);
   const [lastSaved, setLastSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAiSummarizing, setIsAiSummarizing] = useState(false);
   
   const saveTimeoutRef = useRef(null);
-
-  const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-  const types = ['general', 'idea', 'task', 'meeting'];
 
   // Load note if editing
   useEffect(() => {
@@ -37,8 +34,6 @@ const NoteEditor = () => {
           if (note) {
             setTitle(note.title);
             setContent(note.content);
-            setType(note.type || 'general');
-            setColor(note.color || null);
             setFolderId(note.folderId || null);
             setLastSaved(new Date(note.updatedAt));
           }
@@ -51,7 +46,7 @@ const NoteEditor = () => {
   }, [id]);
 
   // Save logic
-  const saveNote = useCallback(async (currentTitle, currentContent, currentType, currentColor) => {
+  const saveNote = useCallback(async (currentTitle, currentContent) => {
     if (!currentTitle && !currentContent) return;
 
     setIsSaving(true);
@@ -60,8 +55,8 @@ const NoteEditor = () => {
         id: (id === 'new' || !id) ? null : id,
         title: currentTitle,
         content: currentContent,
-        type: currentType,
-        color: currentColor,
+        type: 'general',
+        color: null,
         folderId
       });
       
@@ -82,41 +77,47 @@ const NoteEditor = () => {
   const handleTitleChange = (e) => {
     const val = e.target.value;
     setTitle(val);
-    triggerAutoSave(val, content, type, color);
+    triggerAutoSave(val, content);
   };
 
   const handleContentChange = (e) => {
     const val = e.target.value;
     setContent(val);
-    triggerAutoSave(title, val, type, color);
+    triggerAutoSave(title, val);
   };
 
-  const handleTypeChange = (newType) => {
-    setType(newType);
-    triggerAutoSave(title, content, newType, color);
-  };
-
-  const handleColorChange = (newColor) => {
-    setColor(newColor);
-    triggerAutoSave(title, content, type, newColor);
-  };
-
-  const triggerAutoSave = (t, c, ty, co) => {
+  const triggerAutoSave = (t, c) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveNote(t, c, ty, co);
+      saveNote(t, c);
     }, 1500);
+  };
+
+  const handleAiSummarize = async () => {
+    if (isAiSummarizing || !content.trim()) return;
+    
+    setIsAiSummarizing(true);
+    try {
+      const summary = await aiService.summarizeNote(content);
+      const newContent = `${content}\n\n---\n✨ AI Summary:\n${summary}`;
+      setContent(newContent);
+      saveNote(title, newContent);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsAiSummarizing(false);
+    }
   };
 
   const handleBack = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    await saveNote(title, content, type, color);
+    await saveNote(title, content);
     navigate(-1);
   };
 
   const handleDone = async () => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    await saveNote(title, content, type, color);
+    await saveNote(title, content);
     navigate('/notes');
   };
 
@@ -175,9 +176,23 @@ const NoteEditor = () => {
       </div>
 
       <div className="editor-toolbar glass">
-        <button onClick={handleDelete} className="toolbar-btn"><Trash2 size={20} color="#ef4444" /></button>
-        <div className="toolbar-spacer"></div>
-        <span className="char-count">{content.length} characters</span>
+        <div className="toolbar-left">
+          <button 
+            onClick={handleAiSummarize} 
+            className={`ai-btn ${isAiSummarizing ? 'loading' : ''}`}
+            disabled={isAiSummarizing}
+            title="Summarize with AI"
+          >
+            {isAiSummarizing ? <Loader2 size={20} className="spin" /> : <Sparkles size={20} />}
+            <span>AI Summarize</span>
+          </button>
+        </div>
+        
+        <div className="toolbar-right">
+          <button onClick={handleDelete} className="toolbar-btn"><Trash2 size={20} color="#ef4444" /></button>
+          <div className="toolbar-spacer"></div>
+          <span className="char-count">{content.length} characters</span>
+        </div>
       </div>
 
       <ShareModal 
