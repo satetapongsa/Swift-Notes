@@ -175,7 +175,7 @@ const NoteEditor = () => {
         ></textarea>
       </div>
 
-      <div className="editor-toolbar glass">
+      <div className="editor-toolbar">
         <div className="toolbar-left">
           <button 
             onClick={handleAiSummarize} 
@@ -183,15 +183,16 @@ const NoteEditor = () => {
             disabled={isAiSummarizing}
             title="Summarize with AI"
           >
-            {isAiSummarizing ? <Loader2 size={20} className="spin" /> : <Sparkles size={20} />}
+            {isAiSummarizing ? <Loader2 size={18} className="spin" /> : <Sparkles size={18} />}
             <span>AI Summarize</span>
           </button>
         </div>
         
         <div className="toolbar-right">
-          <button onClick={handleDelete} className="toolbar-btn"><Trash2 size={20} color="#ef4444" /></button>
-          <div className="toolbar-spacer"></div>
-          <span className="char-count">{content.length} characters</span>
+          <button onClick={handleDelete} className="toolbar-btn" title="Delete Note">
+            <Trash2 size={20} />
+          </button>
+          <span className="char-count">{content.length} chars</span>
         </div>
       </div>
 

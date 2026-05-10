@@ -1,169 +1,95 @@
-.editor-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-color);
-  padding: 0; /* Override page-container padding */
-}
-
-.editor-header {
-  padding: 16px 20px;
+.editor-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
+  background: rgba(22, 22, 26, 0.8);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-color);
+  z-index: 1000;
 }
 
-.back-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.toolbar-left, .toolbar-right {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
+  gap: 16px;
 }
 
-.status-info {
-  flex: 1;
-  text-align: center;
-}
-
-.saving-text {
-  font-size: 0.8rem;
-  color: var(--primary-color);
-  font-weight: 500;
-}
-
-.last-saved {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.header-actions {
+.ai-btn {
   display: flex;
+  align-items: center;
   gap: 10px;
-}
-
-.done-btn {
-  background: var(--primary-color);
+  padding: 10px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
   color: white;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
-}
-
-.more-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-}
-
-.editor-body {
-  flex: 1;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.title-input {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 2rem;
   font-weight: 700;
-  width: 100%;
-  margin-bottom: 8px;
-  font-family: inherit;
-}
-
-.title-input:focus {
-  outline: none;
-}
-
-.title-input::placeholder {
-  color: var(--surface-accent);
-}
-
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-bottom: 24px;
-}
-
-.content-textarea {
-  flex: 1;
-  background: transparent;
+  font-size: 0.9rem;
   border: none;
-  color: var(--text-primary);
-  font-size: 1.1rem;
-  line-height: 1.6;
-  resize: none;
-  width: 100%;
-  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
-.content-textarea:focus {
-  outline: none;
+.ai-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+  filter: brightness(1.1);
 }
 
-.content-textarea::placeholder {
+.ai-btn:disabled {
+  opacity: 0.6;
+  background: var(--surface-accent);
+  cursor: not-allowed;
+}
+
+.ai-btn.loading {
+  background: var(--surface-accent);
   color: var(--text-muted);
-  opacity: 0.5;
 }
 
-.editor-toolbar {
-  position: sticky;
-  bottom: 0;
-  padding: 16px 24px;
-  display: flex;
-  align-items: center;
-  border-bottom: none;
-  border-left: none;
-  border-right: none;
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .toolbar-btn {
-  padding: 8px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  color: #ef4444;
+  border: 1px solid transparent;
   transition: all 0.2s;
 }
 
 .toolbar-btn:hover {
   background: rgba(239, 68, 68, 0.1);
-}
-
-.toolbar-spacer {
-  flex: 1;
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .char-count {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
+  font-weight: 500;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-color);
 }
 
-@media (max-width: 480px) {
-  .title-input {
-    font-size: 1.5rem;
-  }
+/* Ensure editor body doesn't get hidden behind toolbar */
+.editor-body {
+  padding-bottom: 100px !important;
 }
