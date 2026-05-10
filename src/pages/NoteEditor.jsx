@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ChevronLeft, Check, Trash2, Clock, Share2, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronLeft, Check, Trash2, Share2, Sparkles, Loader2 } from 'lucide-react';
 import { noteService } from '../lib/noteService';
 import { aiService } from '../lib/aiService';
 import './NoteEditor.css';
@@ -25,15 +25,15 @@ const NoteEditor = () => {
   
   const saveTimeoutRef = useRef(null);
 
-  // Load note if editing
+  // Load note
   useEffect(() => {
     if (id && id !== 'new') {
       const loadNote = async () => {
         try {
           const note = await noteService.getNoteById(id);
           if (note) {
-            setTitle(note.title);
-            setContent(note.content);
+            setTitle(note.title || '');
+            setContent(note.content || '');
             setFolderId(note.folderId || null);
             setLastSaved(new Date(note.updatedAt));
           }
@@ -45,7 +45,6 @@ const NoteEditor = () => {
     }
   }, [id]);
 
-  // Save logic
   const saveNote = useCallback(async (currentTitle, currentContent) => {
     if (!currentTitle && !currentContent) return;
 
@@ -77,25 +76,19 @@ const NoteEditor = () => {
   const handleTitleChange = (e) => {
     const val = e.target.value;
     setTitle(val);
-    triggerAutoSave(val, content);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => saveNote(val, content), 1500);
   };
 
   const handleContentChange = (e) => {
     const val = e.target.value;
     setContent(val);
-    triggerAutoSave(title, val);
-  };
-
-  const triggerAutoSave = (t, c) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveNote(t, c);
-    }, 1500);
+    saveTimeoutRef.current = setTimeout(() => saveNote(title, val), 1500);
   };
 
   const handleAiSummarize = async () => {
     if (isAiSummarizing || !content.trim()) return;
-    
     setIsAiSummarizing(true);
     try {
       const summary = await aiService.summarizeNote(content);
@@ -140,61 +133,55 @@ const NoteEditor = () => {
         </button>
         
         <div className="status-info">
-          {isSaving ? (
-            <span className="saving-text">Saving...</span>
-          ) : lastSaved ? (
-            <span className="last-saved">Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          ) : null}
+          {isSaving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "New Note"}
         </div>
 
         <div className="header-actions">
+          <button onClick={() => setIsShareModalOpen(true)} className="glass" style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Share2 size={20} />
+          </button>
           <button onClick={handleDone} className="done-btn">
             <Check size={20} />
             <span>Done</span>
           </button>
-          <button onClick={() => setIsShareModalOpen(true)} className="more-btn glass">
-            <Share2 size={20} />
-          </button>
         </div>
       </header>
 
-      <div className="editor-body">
+      <main className="editor-body">
         <input 
           type="text" 
           className="title-input" 
           placeholder="Note Title" 
           value={title}
           onChange={handleTitleChange}
+          autoFocus={!title}
         />
         
         <textarea 
           className="content-textarea" 
-          placeholder="Start writing..."
+          placeholder="Start writing your thoughts..."
           value={content}
           onChange={handleContentChange}
-        ></textarea>
-      </div>
+        />
+      </main>
 
-      <div className="editor-toolbar">
-        <div className="toolbar-left">
-          <button 
-            onClick={handleAiSummarize} 
-            className={`ai-btn ${isAiSummarizing ? 'loading' : ''}`}
-            disabled={isAiSummarizing}
-            title="Summarize with AI"
-          >
-            {isAiSummarizing ? <Loader2 size={18} className="spin" /> : <Sparkles size={18} />}
-            <span>AI Summarize</span>
-          </button>
-        </div>
+      <footer className="editor-toolbar">
+        <button 
+          onClick={handleAiSummarize} 
+          className={`ai-btn ${isAiSummarizing ? 'loading' : ''}`}
+          disabled={isAiSummarizing}
+        >
+          {isAiSummarizing ? <Loader2 size={18} className="spin" /> : <Sparkles size={18} />}
+          <span>AI Summarize</span>
+        </button>
         
         <div className="toolbar-right">
-          <button onClick={handleDelete} className="toolbar-btn" title="Delete Note">
+          <button onClick={handleDelete} className="toolbar-btn">
             <Trash2 size={20} />
           </button>
           <span className="char-count">{content.length} chars</span>
         </div>
-      </div>
+      </footer>
 
       <ShareModal 
         isOpen={isShareModalOpen} 

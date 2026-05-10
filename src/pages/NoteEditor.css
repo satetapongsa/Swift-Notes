@@ -1,57 +1,162 @@
+.editor-page {
+  min-height: 100vh;
+  background: var(--background-color);
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+.editor-header {
+  position: sticky;
+  top: 0;
+  height: 64px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(18, 18, 22, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1000;
+}
+
+.editor-header .back-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-info {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.done-btn {
+  background: var(--primary-color);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.editor-body {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-bottom: 100px; /* Space for toolbar */
+}
+
+.title-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+  outline: none;
+  padding: 0;
+  margin: 0;
+}
+
+.title-input::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.content-textarea {
+  width: 100%;
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  outline: none;
+  resize: none;
+  padding: 0;
+  min-height: 300px;
+}
+
+.content-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.15);
+}
+
 .editor-toolbar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  height: 76px;
   padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(22, 22, 26, 0.8);
-  backdrop-filter: blur(20px);
+  background: rgba(22, 22, 26, 0.85);
+  backdrop-filter: blur(25px);
   border-top: 1px solid var(--border-color);
   z-index: 1000;
-}
-
-.toolbar-left, .toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
 }
 
 .ai-btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 20px;
-  border-radius: 14px;
+  padding: 12px 24px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #8b5cf6, #3b82f6);
   color: white;
   font-weight: 700;
   font-size: 0.9rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
   transition: all 0.3s ease;
-  white-space: nowrap;
 }
 
-.ai-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-  filter: brightness(1.1);
-}
-
-.ai-btn:disabled {
-  opacity: 0.6;
-  background: var(--surface-accent);
-  cursor: not-allowed;
+.ai-btn:active {
+  transform: scale(0.95);
 }
 
 .ai-btn.loading {
   background: var(--surface-accent);
+  opacity: 0.7;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.toolbar-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ef4444;
+}
+
+.char-count {
+  font-size: 0.8rem;
   color: var(--text-muted);
+  border-left: 1px solid var(--border-color);
+  padding-left: 16px;
 }
 
 .spin {
@@ -61,35 +166,4 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-.toolbar-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  color: #ef4444;
-  border: 1px solid transparent;
-  transition: all 0.2s;
-}
-
-.toolbar-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.char-count {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  padding-left: 12px;
-  border-left: 1px solid var(--border-color);
-}
-
-/* Ensure editor body doesn't get hidden behind toolbar */
-.editor-body {
-  padding-bottom: 100px !important;
 }
